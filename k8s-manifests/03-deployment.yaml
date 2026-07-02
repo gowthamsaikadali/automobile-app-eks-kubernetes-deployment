@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: autoforge
+  namespace: dev
+  labels:
+    app: autoforge
+spec:
+  replicas: 2          # baseline pod count — HPA will scale this up/down later
+  selector:
+    matchLabels:
+      app: autoforge
+  template:
+    metadata:
+      labels:
+        app: autoforge
+    spec:
+      containers:
+        - name: autoforge
+          image: <ACCOUNT_ID>.dkr.ecr.ap-south-1.amazonaws.com/autoforge:latest
+          ports:
+            - containerPort: 5000
+
+          # Pulls all keys from the ConfigMap and Secret in as env vars —
+          # no need to list each one individually.
+          envFrom:
+            - configMapRef:
+                name: autoforge-config
+            - secretRef:
+                name: autoforge-secret
+
+          # Resource requests/limits are what HPA math is based on — without
+          # these, "70% of CPU" is undefined and HPA can't compute anything.
+          resources:
+            requests:
+              cpu: "150m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+          # Liveness: "is this pod alive at all?" If this fails repeatedly,
+          # Kubernetes kills and restarts the container. This is the actual
+          # self-healing mechanism at the pod level.
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 5000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+
+          # Readiness: "is this pod ready to receive traffic right now?"
+          # If this fails, the pod is pulled out of the Service's endpoint
+          # list (no traffic sent to it) but NOT restarted. Used during
+          # startup or temporary overload.
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3

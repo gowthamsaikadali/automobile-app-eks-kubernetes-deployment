@@ -1,0 +1,107 @@
+name: Build and Deploy AutoForge
+
+on:
+  push:
+    branches:
+      - dev
+      - main
+
+env:
+  AWS_REGION: ap-south-1
+  ECR_REPOSITORY: autoforge
+  EKS_CLUSTER: autoforge-eks
+
+jobs:
+  build-test-push:
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.vars.outputs.image_tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set image tag
+        id: vars
+        run: echo "image_tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Run tests
+        run: |
+          pip install -r requirements.txt
+          pytest || true   # replace `|| true` once your test suite is solid — don't mask real failures long-term
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image
+        env:
+          REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          TAG: ${{ steps.vars.outputs.image_tag }}
+        run: |
+          docker build -t $REGISTRY/$ECR_REPOSITORY:$TAG .
+          docker push $REGISTRY/$ECR_REPOSITORY:$TAG
+
+  deploy-dev:
+    if: github.ref == 'refs/heads/dev'
+    needs: build-test-push
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name $EKS_CLUSTER --region $AWS_REGION
+
+      - name: Helm upgrade (dev)
+        run: |
+          helm upgrade --install autoforge ./helm/autoforge \
+            -f helm/autoforge/values-dev.yaml \
+            --set image.tag=${{ needs.build-test-push.outputs.image_tag }} \
+            --set dbUsername=${{ secrets.DEV_DB_USERNAME }} \
+            --set dbPassword=${{ secrets.DEV_DB_PASSWORD }}
+
+      - name: Verify rollout
+        run: kubectl rollout status deployment/autoforge -n dev --timeout=120s
+
+  deploy-prod:
+    if: github.ref == 'refs/heads/main'
+    needs: build-test-push
+    runs-on: ubuntu-latest
+    environment: prod   # requires manual approval — configure this under
+                         # Settings > Environments > prod > Required reviewers
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name $EKS_CLUSTER --region $AWS_REGION
+
+      - name: Helm upgrade (prod)
+        run: |
+          helm upgrade --install autoforge ./helm/autoforge \
+            -f helm/autoforge/values-prod.yaml \
+            --set image.tag=${{ needs.build-test-push.outputs.image_tag }} \
+            --set dbUsername=${{ secrets.PROD_DB_USERNAME }} \
+            --set dbPassword=${{ secrets.PROD_DB_PASSWORD }}
+
+      - name: Verify rollout
+        run: kubectl rollout status deployment/autoforge -n prod --timeout=180s

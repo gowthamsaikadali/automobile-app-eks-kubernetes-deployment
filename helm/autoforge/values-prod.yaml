@@ -1,0 +1,9 @@
+namespace: prod
+replicaCount: 3
+hpa:
+  minReplicas: 3
+  maxReplicas: 10
+config:
+  APP_ENV: "production"
+  LOG_LEVEL: "warn"
+  FEATURE_NEW_UI: "false"
