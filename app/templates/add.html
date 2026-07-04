@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Add Vehicle — AutoForge</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header><h1>Add a Vehicle</h1></header>
+  <form method="POST">
+    <label>Model <input type="text" name="model" required></label>
+    <label>Type <input type="text" name="type" required></label>
+    <label>Units Produced <input type="number" name="units_produced" required></label>
+    <button type="submit" class="btn">Save</button>
+  </form>
+  <a href="{{ url_for('index') }}">← Back</a>
+</body>
+</html>

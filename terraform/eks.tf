@@ -37,6 +37,24 @@ module "eks" {
   # via `aws eks update-kubeconfig` without extra aws-auth ConfigMap wrangling.
   enable_cluster_creator_admin_permissions = true
 
+  # This replaces the manual `kubectl edit configmap aws-auth` step —
+  # the GitHub Actions role gets cluster access automatically as part
+  # of this apply, scoped to what it actually needs (not system:masters).
+  access_entries = {
+    github_actions = {
+      principal_arn = aws_iam_role.github_actions.arn
+      policy_associations = {
+        deploy = {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSEditPolicy"
+          access_scope = {
+            type       = "namespace"
+            namespaces = ["dev", "prod"]
+          }
+        }
+      }
+    }
+  }
+
   tags = {
     Project = "autoforge-k8s"
   }

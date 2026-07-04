@@ -50,3 +50,43 @@ variable "node_max_size" {
   type    = number
   default = 4
 }
+
+variable "ecr_repo_name" {
+  description = "ECR repository name for the app image"
+  type        = string
+  default     = "automobile-app"
+}
+
+variable "github_org" {
+  description = "GitHub username/org that owns the repo — scopes the OIDC trust policy"
+  type        = string
+  default     = "gowthamsaikadali"
+}
+
+variable "github_repo" {
+  description = "GitHub repo name — scopes the OIDC trust policy"
+  type        = string
+  default     = "automobile-app-eks-kubernetes-deployment"
+}
+
+# Secret values — never given defaults, never committed. Pass via
+# terraform.tfvars (gitignored) locally, or TF_VAR_ env vars in CI.
+variable "dev_db_username" {
+  type      = string
+  sensitive = true
+}
+
+variable "dev_db_password" {
+  type      = string
+  sensitive = true
+}
+
+variable "prod_db_username" {
+  type      = string
+  sensitive = true
+}
+
+variable "prod_db_password" {
+  type      = string
+  sensitive = true
+}

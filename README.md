@@ -1,38 +1,57 @@
-# AutoForge-K8s — production-style Kubernetes on EKS
+# AutoForge-K8s — fully automated EKS deployment
 
 Runs a containerized app at scale with self-healing and autoscaling.
+Everything except two one-time bootstrap steps is now automated via Terraform + GitHub Actions.
 
-## What's in here
+## The only two manual steps, ever
 
-| Path | Purpose |
+1. `./bootstrap.sh` — creates the S3 state bucket + DynamoDB lock table
+   (has to exist before Terraform can store state in it — chicken and egg).
+2. The first `terraform apply` — someone has to press go once. After this,
+   the `terraform` job in the GitHub Actions workflow re-runs it automatically
+   whenever files under `terraform/` change.
+
+## What Terraform now owns (previously manual)
+
+| Used to be | Now |
 |---|---|
-| `terraform/` | Provisions VPC + EKS cluster + node group + ALB controller |
-| `k8s-manifests/` | Raw, standalone manifests — read these to understand each piece |
-| `helm/autoforge/` | Templated version of the same manifests, parameterized for dev/prod |
-| `.github/workflows/deploy.yaml` | CI/CD: build → test → push to ECR → helm upgrade |
+| `aws ecr create-repository` | `terraform/ecr.tf` |
+| Manual OIDC provider + IAM role creation | `terraform/oidc.tf` |
+| `kubectl edit configmap aws-auth` | `access_entries` block in `terraform/eks.tf` |
+| `kubectl apply 00-namespaces.yaml`, `01-configmap.yaml`, `kubectl create secret` | `terraform/k8s-resources.tf` |
+| `kubectl apply metrics-server` | `terraform/metrics-server.tf` |
+| Static `AWS_ACCESS_KEY_ID`/`SECRET` in GitHub secrets | OIDC federation — no long-lived keys anywhere |
 
-## Build order
+The `k8s-manifests/` folder stays in the repo as reference — worth reading
+once to understand what each object does — but you don't `kubectl apply`
+any of it anymore. Terraform and Helm own the real deployment.
 
-1. `terraform/` — stand up the cluster (~15 min, one-time)
-2. `k8s-manifests/00` through `07` — apply by hand once, to see and understand
-   every object before automating it
-3. `helm/autoforge/` — same app, now templated for repeatable dev/prod deploys
-4. `.github/workflows/deploy.yaml` — push to `dev` or `main` and let the
-   pipeline do steps 2-3 for you going forward
+## First-time setup
 
-## GitHub Actions secrets you need to set
+```bash
+./bootstrap.sh
+cd terraform
+cp terraform.tfvars.example terraform.tfvars   # fill in real DB creds, gitignored
+terraform init
+terraform apply
+terraform output github_actions_role_arn       # paste into deploy.yaml's GHA_ROLE_ARN
+```
 
-Settings → Secrets and variables → Actions:
-- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
-- `DEV_DB_USERNAME`, `DEV_DB_PASSWORD`
-- `PROD_DB_USERNAME`, `PROD_DB_PASSWORD`
+Then in GitHub: Settings → Secrets → add `DEV_DB_USERNAME`, `DEV_DB_PASSWORD`,
+`PROD_DB_USERNAME`, `PROD_DB_PASSWORD` (used by both Terraform and Helm now).
+Settings → Environments → create `prod` with a required reviewer.
 
-Settings → Environments → create `prod` with a required reviewer, so
-production deploys need manual sign-off.
+## Day to day
+
+```bash
+git push origin dev    # app change → build, test, push, deploy to dev — fully automatic
+git push origin main   # merge → build → pauses for your approval → deploys to prod
+```
+Changing something under `terraform/`? Push it — the `terraform` job applies it
+automatically, no local `terraform apply` needed again.
 
 ## Cost note
 
-EKS control plane is billed per hour regardless of load, plus the NAT
-gateway and 2x t3.medium nodes. Run `terraform destroy` when you're not
-actively working on this to avoid burning credits between sessions —
-`terraform apply` brings it back in ~15 minutes.
+`terraform destroy` when you're done for the day — EKS + NAT gateway bill
+hourly regardless of load. `terraform apply` brings everything back,
+including namespaces/secrets/metrics-server, in ~15 minutes.

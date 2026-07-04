@@ -5,13 +5,46 @@ on:
     branches:
       - dev
       - main
+    paths-ignore:
+      - '**.md'
+
+permissions:
+  id-token: write   # required for OIDC — this is what replaces static AWS keys
+  contents: read
 
 env:
   AWS_REGION: ap-south-1
-  ECR_REPOSITORY: autoforge
+  ECR_REPOSITORY: automobile-app
   EKS_CLUSTER: autoforge-eks
+  # From `terraform output github_actions_role_arn` after the first apply —
+  # paste it here once, it doesn't change afterward.
+  GHA_ROLE_ARN: arn:aws:iam::<ACCOUNT_ID>:role/autoforge-eks-github-actions
 
 jobs:
+  terraform:
+    if: contains(github.event.head_commit.modified, 'terraform/')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.GHA_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - run: terraform init
+      - run: terraform apply -auto-approve
+        env:
+          TF_VAR_dev_db_username:  ${{ secrets.DEV_DB_USERNAME }}
+          TF_VAR_dev_db_password:  ${{ secrets.DEV_DB_PASSWORD }}
+          TF_VAR_prod_db_username: ${{ secrets.PROD_DB_USERNAME }}
+          TF_VAR_prod_db_password: ${{ secrets.PROD_DB_PASSWORD }}
+
   build-test-push:
     runs-on: ubuntu-latest
     outputs:
@@ -24,15 +57,14 @@ jobs:
         run: echo "image_tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
       - name: Run tests
+        working-directory: app
         run: |
           pip install -r requirements.txt
-          pytest || true   # replace `|| true` once your test suite is solid — don't mask real failures long-term
+          pytest
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ env.GHA_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to ECR
@@ -55,15 +87,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ env.GHA_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Update kubeconfig
-        run: aws eks update-kubeconfig --name $EKS_CLUSTER --region $AWS_REGION
+      - run: aws eks update-kubeconfig --name $EKS_CLUSTER --region $AWS_REGION
 
       - name: Helm upgrade (dev)
         run: |
@@ -73,27 +102,22 @@ jobs:
             --set dbUsername=${{ secrets.DEV_DB_USERNAME }} \
             --set dbPassword=${{ secrets.DEV_DB_PASSWORD }}
 
-      - name: Verify rollout
-        run: kubectl rollout status deployment/autoforge -n dev --timeout=120s
+      - run: kubectl rollout status deployment/autoforge -n dev --timeout=120s
 
   deploy-prod:
     if: github.ref == 'refs/heads/main'
     needs: build-test-push
     runs-on: ubuntu-latest
-    environment: prod   # requires manual approval — configure this under
-                         # Settings > Environments > prod > Required reviewers
+    environment: prod
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ env.GHA_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Update kubeconfig
-        run: aws eks update-kubeconfig --name $EKS_CLUSTER --region $AWS_REGION
+      - run: aws eks update-kubeconfig --name $EKS_CLUSTER --region $AWS_REGION
 
       - name: Helm upgrade (prod)
         run: |
@@ -103,5 +127,4 @@ jobs:
             --set dbUsername=${{ secrets.PROD_DB_USERNAME }} \
             --set dbPassword=${{ secrets.PROD_DB_PASSWORD }}
 
-      - name: Verify rollout
-        run: kubectl rollout status deployment/autoforge -n prod --timeout=180s
+      - run: kubectl rollout status deployment/autoforge -n prod --timeout=180s
