@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ app_name }}</title>
+    <style>
+        :root {
+            --bg: {{ '#0f172a' if dark_mode else '#f8fafc' }};
+            --fg: {{ '#f8fafc' if dark_mode else '#0f172a' }};
+            --card: {{ '#1e293b' if dark_mode else '#ffffff' }};
+            --accent: #2563eb;
+        }
+        body { font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: var(--bg); color: var(--fg); margin: 0; padding: 2rem; }
+        h1 { margin-bottom: 0.25rem; }
+        .badge { display: inline-block; background: var(--accent); color: white; padding: 0.2rem 0.6rem; border-radius: 999px; font-size: 0.75rem; margin-left: 0.5rem; }
+        .meta { color: #64748b; margin-bottom: 2rem; }
+        table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+        th, td { text-align: left; padding: 0.75rem 1rem; border-bottom: 1px solid rgba(100,116,139,0.2); }
+        th { background: rgba(37,99,235,0.1); }
+        footer { margin-top: 2rem; color: #64748b; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+    <h1>{{ app_name }} <span class="badge">{{ app_env }}</span></h1>
+    <p class="meta">v{{ app_version }} &middot; served by pod <strong>{{ hostname }}</strong></p>
+
+    <table>
+        <thead>
+            <tr><th>ID</th><th>Model</th><th>Assembly Line</th><th>Status</th><th>Units Produced</th></tr>
+        </thead>
+        <tbody>
+        {% for v in vehicles %}
+            <tr>
+                <td>{{ v.id }}</td>
+                <td>{{ v.model }}</td>
+                <td>{{ v.line }}</td>
+                <td>{{ v.status }}</td>
+                <td>{{ v.units }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <footer>
+        Endpoints: <a href="/api/vehicles">/api/vehicles</a> &middot;
+        <a href="/api/info">/api/info</a> &middot;
+        <a href="/healthz">/healthz</a> &middot;
+        <a href="/readyz">/readyz</a>
+    </footer>
+</body>
+</html>

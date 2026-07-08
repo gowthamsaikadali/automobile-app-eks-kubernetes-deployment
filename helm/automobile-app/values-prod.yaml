@@ -1,0 +1,10 @@
+namespace: prod
+replicaCount: 2
+config:
+  appEnv: "prod"
+  dbHost: "autoforge-db.prod.svc.cluster.local"
+  dbName: "autoforge_prod"
+  featureFlagDarkMode: "false"
+hpa:
+  minReplicas: 2
+  maxReplicas: 5
