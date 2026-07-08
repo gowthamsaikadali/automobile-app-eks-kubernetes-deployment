@@ -14,7 +14,7 @@ terraform {
 
   # Remote state (S3 + DynamoDB lock table).
   # IMPORTANT: create the bucket and DynamoDB table FIRST (see scripts/bootstrap-backend.ps1),
-  # then uncomment this block and run `terraform init` again....
+  # then uncomment this block and run `terraform init` again.
   backend "s3" {
   bucket         = "gowthamautoforgetfstate34"
   key            = "eks/terraform.tfstate"
