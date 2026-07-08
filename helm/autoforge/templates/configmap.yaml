@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: autoforge-config
-  namespace: {{ .Values.namespace }}
-data:
-  {{- toYaml .Values.config | nindent 2 }}

@@ -1,9 +1,0 @@
-terraform/
-helm/
-k8s-manifests/
-.github/
-.git/
-*.md
-__pycache__/
-*.pyc
-.pytest_cache/

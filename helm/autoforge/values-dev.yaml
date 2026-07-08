@@ -1,9 +1,0 @@
-namespace: dev
-replicaCount: 2
-hpa:
-  minReplicas: 2
-  maxReplicas: 4
-config:
-  APP_ENV: "development"
-  LOG_LEVEL: "debug"
-  FEATURE_NEW_UI: "true"
