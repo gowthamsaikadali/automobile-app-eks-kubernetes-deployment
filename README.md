@@ -10,7 +10,7 @@ Free Trial account** with limited credits. All infrastructure defaults to
 
 ---
 
-## 0. What you're about to build
+## 0. What you're about to build....
 
 ```
 Internet

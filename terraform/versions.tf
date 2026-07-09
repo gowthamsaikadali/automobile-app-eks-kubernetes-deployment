@@ -15,12 +15,12 @@ terraform {
   # Remote state (S3 + DynamoDB lock table).
   # IMPORTANT: create the bucket and DynamoDB table FIRST (see scripts/bootstrap-backend.ps1),
   # then uncomment this block and run `terraform init` again.
-  #
-  # backend "s3" {
-  #   bucket         = "REPLACE-ME-autoforge-tfstate-bucket"
-  #   key            = "eks/terraform.tfstate"
-  #   region         = "ap-south-1"
-  #   dynamodb_table = "autoforge-tf-lock"
-  #   encrypt        = true
-  # }
+  
+ backend "s3" {
+    bucket         = "gowthamautoforgetfstate2026"
+    key            = "eks/terraform.tfstate"
+    region         = "ap-south-1"
+    dynamodb_table = "autoforge-tf-lock"
+    encrypt        = true
+  }
 }
