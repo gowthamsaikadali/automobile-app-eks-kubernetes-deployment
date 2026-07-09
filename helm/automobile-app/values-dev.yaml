@@ -1,9 +1,0 @@
-namespace: dev
-replicaCount: 1
-config:
-  appEnv: "dev"
-  dbHost: "autoforge-db.dev.svc.cluster.local"
-  dbName: "autoforge_dev"
-hpa:
-  minReplicas: 1
-  maxReplicas: 3

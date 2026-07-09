@@ -1,6 +1,0 @@
-apiVersion: v2
-name: automobile-app
-description: Helm chart for the AutoForge automobile manufacturing dashboard on EKS
-type: application
-version: 1.0.0
-appVersion: "1.0.0"
