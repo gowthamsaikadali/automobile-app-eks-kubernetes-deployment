@@ -1,0 +1,8 @@
+namespace: prod
+replicaCount: 2
+config:
+  appEnv: "prod"
+  featureFlagDarkMode: "false"
+hpa:
+  minReplicas: 2
+  maxReplicas: 5

@@ -1,0 +1,7 @@
+namespace: dev
+replicaCount: 1
+config:
+  appEnv: "dev"
+hpa:
+  minReplicas: 1
+  maxReplicas: 3

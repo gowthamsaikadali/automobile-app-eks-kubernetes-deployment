@@ -1,0 +1,64 @@
+replicaCount: 1
+
+namespace: dev
+
+image:
+  repository: REPLACE_WITH_ECR_REPOSITORY_URL
+  tag: latest
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  name: autoforge-sa
+
+config:
+  appName: "AutoForge Dashboard"
+  appEnv: "dev"
+  appVersion: "2.0.0"
+  dbHost: "REPLACE_WITH_RDS_ADDRESS"
+  dbPort: "3306"
+  dbName: "autoforge"
+  dbUser: "autoforge_admin"
+  featureFlagDarkMode: "true"
+
+secret:
+  dbPassword: "REPLACE_WITH_YOUR_TERRAFORM_DB_PASSWORD"
+
+service:
+  clusterIPPort: 80
+  loadBalancerPort: 80
+  targetPort: 5000
+  createLoadBalancer: true
+
+ingress:
+  enabled: true
+  className: alb
+  scheme: internet-facing
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
+hpa:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+probes:
+  liveness:
+    path: /healthz
+    initialDelaySeconds: 10
+    periodSeconds: 15
+  readiness:
+    path: /readyz
+    initialDelaySeconds: 5
+    periodSeconds: 10
+
+seedJob:
+  enabled: false

@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: autoforge-app
+  namespace: dev
+  labels:
+    app: autoforge-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: autoforge-app
+  template:
+    metadata:
+      labels:
+        app: autoforge-app
+    spec:
+      serviceAccountName: autoforge-sa
+      containers:
+        - name: autoforge-app
+          image: REPLACE_WITH_ECR_IMAGE_URI:latest
+          ports:
+            - containerPort: 5000
+          envFrom:
+            - configMapRef:
+                name: autoforge-config
+            - secretRef:
+                name: autoforge-secret
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10

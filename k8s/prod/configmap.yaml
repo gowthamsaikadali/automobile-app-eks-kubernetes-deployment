@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: autoforge-config
+  namespace: prod
+data:
+  APP_NAME: "AutoForge Dashboard"
+  APP_ENV: "prod"
+  APP_VERSION: "2.0.0"
+  # Replace with the real RDS endpoint from `terraform output db_address`
+  DB_HOST: "REPLACE_WITH_RDS_ADDRESS"
+  DB_PORT: "3306"
+  DB_NAME: "autoforge"
+  DB_USER: "autoforge_admin"
+  FEATURE_FLAG_DARK_MODE: "false"

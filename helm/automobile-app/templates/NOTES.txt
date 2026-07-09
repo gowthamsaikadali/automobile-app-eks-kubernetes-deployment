@@ -1,0 +1,10 @@
+AutoForge has been deployed to namespace: {{ .Values.namespace }}
+
+Check rollout status:
+  kubectl rollout status deployment/autoforge-app -n {{ .Values.namespace }}
+
+Get the LoadBalancer URL (may take 2-3 minutes to provision):
+  kubectl get svc autoforge-lb -n {{ .Values.namespace }} -o jsonpath="{.status.loadBalancer.ingress[0].hostname}"
+
+Watch the HPA:
+  kubectl get hpa -n {{ .Values.namespace }} -w

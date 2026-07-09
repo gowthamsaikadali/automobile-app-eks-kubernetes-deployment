@@ -1,0 +1,16 @@
+{{- if .Values.service.createLoadBalancer }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: autoforge-lb
+  namespace: {{ .Values.namespace }}
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+spec:
+  type: LoadBalancer
+  selector:
+    app: autoforge-app
+  ports:
+    - port: {{ .Values.service.loadBalancerPort }}
+      targetPort: {{ .Values.service.targetPort }}
+{{- end }}

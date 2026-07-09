@@ -1,0 +1,22 @@
+# Run this once after the RDS instance is up, using the SAME image as the
+# Deployment (it contains seed.py). Safe to re-run - seed.py skips inserting
+# if the table already has rows.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: autoforge-seed
+  namespace: prod
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: seed
+          image: REPLACE_WITH_ECR_IMAGE_URI:latest
+          command: ["python", "seed.py"]
+          envFrom:
+            - configMapRef:
+                name: autoforge-config
+            - secretRef:
+                name: autoforge-secret
