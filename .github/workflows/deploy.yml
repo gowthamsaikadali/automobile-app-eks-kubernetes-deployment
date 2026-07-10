@@ -80,6 +80,7 @@ jobs:
         env:
           IMAGE_URI: ${{ needs.build-and-push.outputs.image_uri }}
           DB_HOST: ${{ secrets.AUTOFORGE_DB_HOST }}
+          DB_USER: ${{ secrets.AUTOFORGE_DB_USER }}
           DB_PASSWORD: ${{ secrets.AUTOFORGE_DB_PASSWORD }}
         run: |
           IMAGE_REPO="${IMAGE_URI%:*}"
@@ -89,6 +90,7 @@ jobs:
             --set image.repository="$IMAGE_REPO" \
             --set image.tag="$IMAGE_TAG" \
             --set config.dbHost="$DB_HOST" \
+            --set config.dbUser="$DB_USER" \
             --set secret.dbPassword="$DB_PASSWORD" \
             --namespace ${{ env.ENVIRONMENT }} \
             --create-namespace \
