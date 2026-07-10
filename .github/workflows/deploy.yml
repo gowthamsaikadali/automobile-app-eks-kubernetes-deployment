@@ -79,6 +79,8 @@ jobs:
       - name: Deploy with Helm
         env:
           IMAGE_URI: ${{ needs.build-and-push.outputs.image_uri }}
+          DB_HOST: ${{ secrets.AUTOFORGE_DB_HOST }}
+          DB_PASSWORD: ${{ secrets.AUTOFORGE_DB_PASSWORD }}
         run: |
           IMAGE_REPO="${IMAGE_URI%:*}"
           IMAGE_TAG="${IMAGE_URI##*:}"
@@ -86,9 +88,11 @@ jobs:
             -f ./helm/automobile-app/values-${{ env.ENVIRONMENT }}.yaml \
             --set image.repository="$IMAGE_REPO" \
             --set image.tag="$IMAGE_TAG" \
+            --set config.dbHost="$DB_HOST" \
+            --set secret.dbPassword="$DB_PASSWORD" \
             --namespace ${{ env.ENVIRONMENT }} \
             --create-namespace \
             --wait --timeout 5m
-
+            
       - name: Verify rollout
         run: kubectl rollout status deployment/autoforge-app -n ${{ env.ENVIRONMENT }}
